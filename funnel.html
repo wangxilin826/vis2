@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>用户转化漏斗分析</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', sans-serif; background: #f5f7fa; padding: 20px; }
+        h1 { text-align: center; color: #333; margin-bottom: 8px; font-size: 24px; }
+        .page-subtitle { text-align: center; color: #888; margin-bottom: 30px; font-size: 14px; }
+        .funnel-section {
+            background: #fff; border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            margin-bottom: 30px; padding: 25px;
+        }
+        .section-title {
+            font-size: 18px; font-weight: bold; color: #333;
+            margin-bottom: 15px; padding-left: 12px;
+            border-left: 4px solid #5470c6;
+        }
+        .funnel-chart { width: 100%; height: 420px; }
+        .conversion-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+        .conversion-table th { background: #f0f5ff; padding: 8px 12px; text-align: center; border: 1px solid #e8e8e8; }
+        .conversion-table td { padding: 8px 12px; text-align: center; border: 1px solid #e8e8e8; }
+        .conversion-table tr:hover { background: #fafafa; }
+        .rate-good { color: #52c41a; font-weight: bold; }
+        .rate-warn { color: #faad14; font-weight: bold; }
+        .rate-bad { color: #f5222d; font-weight: bold; }
+        .user-def {
+            margin-top: 12px; padding: 10px 15px;
+            background: #f6f8fc; border-radius: 6px;
+            border-left: 3px solid #5470c6;
+            font-size: 13px; color: #555; line-height: 1.8;
+        }
+        .user-def strong { color: #333; }
+        .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 1200px) { .grid-container { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <h1>用户下单转化漏斗分析</h1>
+    <p class="page-subtitle">从下单页访问到下单成功的全链路转化（日均UV）</p>
+
+    <!-- ALL 漏斗 -->
+    <div class="funnel-section">
+        <div class="section-title">全量用户（ALL）转化漏斗</div>
+        <div id="funnel-all" class="funnel-chart"></div>
+        <table class="conversion-table" id="table-all"></table>
+    </div>
+
+    <!-- 分用户类型 -->
+    <div class="grid-container">
+        <div class="funnel-section">
+            <div class="section-title">历史潜客 转化漏斗</div>
+            <div id="funnel-qianke" class="funnel-chart"></div>
+            <table class="conversion-table" id="table-qianke"></table>
+            <div class="user-def"><strong>历史潜客定义：</strong>180天未寄件散单（用户非新手、活跃、沉默、流失）</div>
+        </div>
+        <div class="funnel-section">
+            <div class="section-title">新手期 转化漏斗</div>
+            <div id="funnel-xinshou" class="funnel-chart"></div>
+            <table class="conversion-table" id="table-xinshou"></table>
+            <div class="user-def"><strong>新手期定义：</strong>180天散件首单寄件发生在近30天内</div>
+        </div>
+        <div class="funnel-section">
+            <div class="section-title">活跃期 转化漏斗</div>
+            <div id="funnel-huoyue" class="funnel-chart"></div>
+            <table class="conversion-table" id="table-huoyue"></table>
+            <div class="user-def"><strong>活跃期定义：</strong>近90天内寄件1单以上人群，剔除新手期</div>
+        </div>
+        <div class="funnel-section">
+            <div class="section-title">沉默期 转化漏斗</div>
+            <div id="funnel-chenmo" class="funnel-chart"></div>
+            <table class="conversion-table" id="table-chenmo"></table>
+            <div class="user-def"><strong>沉默期定义：</strong>近90天未寄散件，180天内寄件1单及以上人群</div>
+        </div>
+        <div class="funnel-section">
+            <div class="section-title">流失期 转化漏斗</div>
+            <div id="funnel-liushi" class="funnel-chart"></div>
+            <table class="conversion-table" id="table-liushi"></table>
+            <div class="user-def"><strong>流失期定义：</strong>近180天未寄散件，近360天内散件寄件1单及以上人群</div>
+        </div>
+    </div>
+
+    <script>
+        var steps = ['下单页访问', '服务覆盖', '上门服务覆盖', '寄收地址填写完成', '填写后可服务', '下单按钮点击', '点击成功', '下单成功'];
+
+        var funnelData = {
+            'ALL': [871222, 811853, 811075, 434764, 432210, 323035, 320224, 318631],
+            '历史潜客': [349980, 291586, 291322, 101169, 99138, 67124, 65637, 65210],
+            '新手期': [66023, 65383, 65304, 31442, 31387, 23761, 23583, 23484],
+            '活跃期': [332220, 333970, 333652, 226595, 226308, 178882, 178243, 177405],
+            '沉默期': [61505, 60539, 60483, 39338, 39255, 28236, 28009, 27887],
+            '流失期': [61494, 60376, 60314, 36220, 36123, 25032, 24752, 24644]
+        };
+
+        function formatNum(n) {
+            if (n >= 10000) return (n / 10000).toFixed(1) + '万';
+            return n.toLocaleString();
+        }
+
+        function getRateClass(rate) {
+            if (rate >= 90) return 'rate-good';
+            if (rate >= 60) return 'rate-warn';
+            return 'rate-bad';
+        }
+
+        function renderFunnel(domId, tableId, title, data) {
+            var chart = echarts.init(document.getElementById(domId));
+            var maxVal = data[0];
+
+            var seriesData = steps.map(function(name, i) {
+                return { value: data[i], name: name };
+            });
+
+            var option = {
+                tooltip: {
+                    trigger: 'item',
+                    formatter: function(p) {
+                        var rate = (p.value / maxVal * 100).toFixed(1);
+                        var stepRate = p.dataIndex > 0 ? (data[p.dataIndex] / data[p.dataIndex - 1] * 100).toFixed(1) + '%' : '-';
+                        return '<b>' + p.name + '</b><br/>UV: ' + p.value.toLocaleString() +
+                               '<br/>整体转化率: ' + rate + '%<br/>环比转化率: ' + stepRate;
+                    }
+                },
+                series: [{
+                    type: 'funnel',
+                    left: '10%',
+                    top: 20,
+                    bottom: 20,
+                    width: '80%',
+                    min: 0,
+                    max: maxVal,
+                    minSize: '20%',
+                    maxSize: '100%',
+                    sort: 'descending',
+                    gap: 2,
+                    label: {
+                        show: true,
+                        position: 'inside',
+                        formatter: function(p) {
+                            var stepRate = p.dataIndex > 0 ? (data[p.dataIndex] / data[p.dataIndex - 1] * 100).toFixed(1) + '%' : '100%';
+                            return p.name + '\n' + formatNum(p.value) + ' | ' + stepRate;
+                        },
+                        fontSize: 12,
+                        lineHeight: 18,
+                        color: '#fff'
+                    },
+                    itemStyle: {
+                        borderColor: '#fff',
+                        borderWidth: 1
+                    },
+                    emphasis: {
+                        label: { fontSize: 14 }
+                    },
+                    data: seriesData
+                }]
+            };
+
+            chart.setOption(option);
+            window.addEventListener('resize', function() { chart.resize(); });
+
+            // 渲染表格
+            var tableEl = document.getElementById(tableId);
+            var html = '<tr><th>步骤</th><th>日均UV</th><th>环比转化率</th><th>整体转化率</th></tr>';
+            for (var i = 0; i < steps.length; i++) {
+                var stepRate = i > 0 ? (data[i] / data[i-1] * 100).toFixed(1) : 100.0;
+                var totalRate = (data[i] / data[0] * 100).toFixed(1);
+                var cls = getRateClass(parseFloat(stepRate));
+                html += '<tr><td>' + steps[i] + '</td><td>' + data[i].toLocaleString() +
+                        '</td><td class="' + cls + '">' + stepRate + '%</td><td>' + totalRate + '%</td></tr>';
+            }
+            tableEl.innerHTML = html;
+        }
+
+        // 渲染所有漏斗
+        renderFunnel('funnel-all', 'table-all', 'ALL', funnelData['ALL']);
+        renderFunnel('funnel-qianke', 'table-qianke', '历史潜客', funnelData['历史潜客']);
+        renderFunnel('funnel-xinshou', 'table-xinshou', '新手期', funnelData['新手期']);
+        renderFunnel('funnel-huoyue', 'table-huoyue', '活跃期', funnelData['活跃期']);
+        renderFunnel('funnel-chenmo', 'table-chenmo', '沉默期', funnelData['沉默期']);
+        renderFunnel('funnel-liushi', 'table-liushi', '流失期', funnelData['流失期']);
+    </script>
+</body>
+</html>

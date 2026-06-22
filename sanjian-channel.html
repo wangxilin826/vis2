@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>散件各渠道揽收量</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', sans-serif; background: #f5f7fa; padding: 20px; }
+        h1 { text-align: center; color: #333; margin-bottom: 6px; font-size: 22px; }
+        .subtitle { text-align: center; color: #888; margin-bottom: 20px; font-size: 14px; }
+        #chart { width: 100%; height: 900px; background: #fff; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <h1>散件各渠道揽收量 w/日</h1>
+    <p class="subtitle">按四大核心渠道分组：自控、二方合作、异业合作及其他、闲鱼</p>
+    <div id="chart"></div>
+
+    <script>
+        var chart = echarts.init(document.getElementById('chart'));
+
+        var groups = [
+            {
+                name: '闲鱼',
+                color: '#73c0de',
+                items: [
+                    { name: '闲鱼', value: 940 }
+                ]
+            },
+            {
+                name: '异业合作及其他',
+                color: '#91cc75',
+                items: [
+                    { name: '其他', value: 54092 },
+                    { name: '优征当日取', value: 18999 },
+                    { name: '徕芬2小时', value: 1926 },
+                    { name: 'waybillday', value: 1337 },
+                    { name: '长沙飘逸当日取', value: 1048 },
+                    { name: '多抓鱼当日取', value: 913 },
+                    { name: '万物心选', value: 667 },
+                    { name: '基诺浦2小时', value: 340 },
+                    { name: '亿境科技当日取', value: 239 }
+                ]
+            },
+            {
+                name: '二方合作',
+                color: '#fac858',
+                items: [
+                    { name: '1688', value: 98547 },
+                    { name: '猫超退货', value: 27915 },
+                    { name: '猫超免费退', value: 7585 },
+                    { name: '飞猪', value: 643 },
+                    { name: '猫超换货', value: 149 }
+                ]
+            },
+            {
+                name: '自控',
+                color: '#5470c6',
+                items: [
+                    { name: '裹裹', value: 182911 },
+                    { name: '支付宝', value: 116418 },
+                    { name: '微信', value: 54431 },
+                    { name: '官方号', value: 23393 },
+                    { name: '闲鱼h5', value: 4394 },
+                    { name: '抖音团购', value: 4025 },
+                    { name: '高德', value: 175 }
+                ]
+            }
+        ];
+
+        var yLabels = [];
+        var barData = [];
+        var barColors = [];
+        var groupMarkers = [];
+
+        groups.forEach(function(group) {
+            var startIdx = yLabels.length;
+            group.items.forEach(function(item) {
+                yLabels.push(item.name);
+                barData.push(item.value);
+                barColors.push(group.color);
+            });
+            var endIdx = yLabels.length - 1;
+            var groupTotal = group.items.reduce(function(s, i) { return s + i.value; }, 0);
+            groupMarkers.push({
+                name: group.name,
+                color: group.color,
+                startIdx: startIdx,
+                endIdx: endIdx,
+                total: groupTotal
+            });
+        });
+
+        var totalItems = yLabels.length;
+
+        var option = {
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: { type: 'shadow' },
+                formatter: function(params) {
+                    var p = params[0];
+                    var wan = (p.value / 10000).toFixed(2);
+                    return '<b>' + p.name + '</b><br/>揽收量: ' + p.value.toLocaleString() + ' (' + wan + ' w/日)';
+                }
+            },
+            grid: { left: 110, right: 150, bottom: 40, top: 20 },
+            xAxis: {
+                type: 'value',
+                name: 'w/日',
+                axisLabel: {
+                    formatter: function(val) { return (val / 10000).toFixed(0); }
+                },
+                splitLine: { lineStyle: { type: 'dashed', color: '#e8e8e8' } }
+            },
+            yAxis: {
+                type: 'category',
+                data: yLabels,
+                axisLabel: { fontSize: 12 },
+                axisTick: { show: false }
+            },
+            series: [{
+                type: 'bar',
+                data: barData.map(function(val, i) {
+                    return {
+                        value: val,
+                        itemStyle: { 
+                            color: barColors[i],
+                            borderRadius: [0, 3, 3, 0]
+                        }
+                    };
+                }),
+                barWidth: '60%',
+                label: {
+                    show: true,
+                    position: 'right',
+                    formatter: function(p) {
+                        return (p.value / 10000).toFixed(2);
+                    },
+                    fontSize: 11,
+                    color: '#555'
+                }
+            }]
+        };
+
+        chart.setOption(option);
+
+        function addGroupAnnotations() {
+            // 获取grid的实际渲染区域
+            var gridModel = chart.getModel().getComponent('grid', 0);
+            var rect = gridModel.coordinateSystem.getRect();
+            // rect: {x, y, width, height}
+            // Y轴为category，item 0在底部(y+height)，item N-1在顶部(y)
+
+            var bandHeight = rect.height / totalItems;
+            var graphicElements = [];
+
+            groupMarkers.forEach(function(g) {
+                // 计算该组的像素位置
+                // index 0 在底部，endIdx的item在图表上方
+                var yTop = rect.y + rect.height - (g.endIdx + 1) * bandHeight + bandHeight * 0.2;
+                var yBottom = rect.y + rect.height - g.startIdx * bandHeight - bandHeight * 0.2;
+                var yCenter = (yTop + yBottom) / 2;
+                var xPos = rect.x + rect.width + 40;
+
+                // 竖线括号 {
+                graphicElements.push({
+                    type: 'polyline',
+                    shape: {
+                        points: [
+                            [xPos - 15, yTop],
+                            [xPos - 5, yTop],
+                            [xPos - 5, yBottom],
+                            [xPos - 15, yBottom]
+                        ]
+                    },
+                    style: { stroke: g.color, lineWidth: 2, fill: 'none' }
+                });
+
+                // 中间横线指向文字
+                graphicElements.push({
+                    type: 'line',
+                    shape: {
+                        x1: xPos - 5, y1: yCenter,
+                        x2: xPos + 5, y2: yCenter
+                    },
+                    style: { stroke: g.color, lineWidth: 2 }
+                });
+
+                // 分组文字
+                graphicElements.push({
+                    type: 'text',
+                    x: xPos + 10,
+                    y: yCenter,
+                    style: {
+                        text: g.name + '\n' + (g.total / 10000).toFixed(1) + 'w/日',
+                        fontSize: 13,
+                        fontWeight: 'bold',
+                        fill: g.color,
+                        textAlign: 'left',
+                        textVerticalAlign: 'middle',
+                        lineHeight: 18
+                    }
+                });
+            });
+
+            chart.setOption({ graphic: graphicElements });
+        }
+
+        // 初次渲染后添加标注
+        setTimeout(addGroupAnnotations, 100);
+
+        window.addEventListener('resize', function() {
+            chart.resize();
+            setTimeout(addGroupAnnotations, 100);
+        });
+    </script>
+</body>
+</html>
