@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>分渠道转化漏斗</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Microsoft YaHei", -apple-system, "PingFang SC", sans-serif;
+    background: #f5f7fa;
+    color: #333;
+    padding: 20px;
+  }
+  h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { font-size: 14px; color: #888; margin-bottom: 22px; }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 1200px) { .grid { grid-template-columns: 1fr; } }
+  .funnel-section {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    padding: 25px;
+  }
+  .section-title {
+    font-size: 18px;
+    font-weight: 700;
+    border-left: 4px solid #5470c6;
+    padding-left: 12px;
+    margin-bottom: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .section-title .overall { font-size: 13px; font-weight: 500; color: #888; }
+  .funnel-chart { width: 100%; height: 420px; }
+  .conversion-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px;
+    font-size: 13px;
+  }
+  .conversion-table th, .conversion-table td {
+    border: 1px solid #e8e8e8;
+    padding: 7px 10px;
+    text-align: center;
+  }
+  .conversion-table th { background: #f0f5ff; font-weight: 600; }
+  .conversion-table tr:hover td { background: #fafafa; }
+  .conversion-table td.step { text-align: left; }
+  .rate-high { color: #52c41a; font-weight: 600; }
+  .rate-mid  { color: #faad14; font-weight: 600; }
+  .rate-low  { color: #f5222d; font-weight: 600; }
+  .foot-note {
+    margin-top: 26px;
+    color: #999;
+    font-size: 12px;
+    line-height: 1.7;
+  }
+</style>
+</head>
+<body>
+  <h1>分渠道 转化漏斗</h1>
+  <div class="subtitle">数据来源：拆分渠道.xlsx ｜ 环比转化率 = 本层 / 上一层 ｜ 整体转化率 = 本层 / 下单页访问 ｜ 数值单位：万</div>
+  <div class="grid" id="grid"></div>
+  <div class="foot-note">
+    说明：已排除「抖音小程序」「闲鱼-H5」两个渠道（其后续环节 UV 大于前置环节，漏斗逻辑异常，疑似埋点口径问题）。
+    漏斗层级：下单页访问 → 服务覆盖 → 上门服务覆盖 → 寄收地址填写完成 → 填写后可服务 → 下单按钮点击 → 点击成功 → 下单成功。
+  </div>
+
+<script>
+const stages = ["下单页访问","服务覆盖","上门服务覆盖","寄收地址填写完成","填写后可服务","下单按钮点击","点击成功","下单成功"];
+const channels = [
+  {name:"支付宝小程序", vals:[359862,345503,345305,134375,133937,96268,95297,94825]},
+  {name:"菜鸟APP小程序-H5", vals:[334791,330555,330052,212933,212673,147130,145874,145071]},
+  {name:"微信小程序", vals:[99692,89523,89458,59076,58702,43624,43302,43097]},
+  {name:"手淘小程序", vals:[84762,69024,68987,32708,32677,23457,23209,23117]},
+  {name:"菜鸟APP小程序", vals:[9032,8983,8974,6117,4603,3395,3296,3299]},
+  {name:"高德小程序", vals:[1860,951,951,503,501,277,261,253]}
+];
+
+function formatNum(v){
+  return v>=10000 ? (v/10000).toFixed(1)+"万" : v.toLocaleString();
+}
+function rateClass(r){
+  return r>=90 ? "rate-high" : (r>=60 ? "rate-mid" : "rate-low");
+}
+
+function renderFunnel(section, ch){
+  const maxVal = ch.vals[0];
+  const seriesData = stages.map((s,i)=>({ value: ch.vals[i], name: s }));
+
+  const chartDom = section.querySelector(".funnel-chart");
+  const chart = echarts.init(chartDom);
+  chart.setOption({
+    tooltip: {
+      trigger: "item",
+      formatter: p=>{
+        const i = stages.indexOf(p.name);
+        const overall = (ch.vals[i]/maxVal*100).toFixed(1);
+        const step = i===0 ? "100.0" : (ch.vals[i]/ch.vals[i-1]*100).toFixed(1);
+        return `<b>${p.name}</b><br/>UV：${ch.vals[i].toLocaleString()}<br/>环比转化：${step}%<br/>整体转化：${overall}%`;
+      }
+    },
+    series: [{
+      type: "funnel",
+      min: 0,
+      max: maxVal,
+      minSize: "20%",
+      maxSize: "100%",
+      sort: "descending",
+      gap: 2,
+      left: "10%",
+      top: 20,
+      bottom: 20,
+      width: "80%",
+      itemStyle: { borderColor: "#fff", borderWidth: 1 },
+      label: {
+        show: true,
+        position: "inside",
+        color: "#fff",
+        fontSize: 12,
+        lineHeight: 18,
+        formatter: p=>{
+          const i = stages.indexOf(p.name);
+          const step = i===0 ? "100%" : (ch.vals[i]/ch.vals[i-1]*100).toFixed(1)+"%";
+          return `${p.name}\n${formatNum(ch.vals[i])} | ${step}`;
+        }
+      },
+      data: seriesData
+    }]
+  });
+  window.addEventListener("resize", ()=>chart.resize());
+
+  // build table
+  let rows="";
+  stages.forEach((s,i)=>{
+    const step = i===0 ? 100 : (ch.vals[i]/ch.vals[i-1]*100);
+    const overall = ch.vals[i]/maxVal*100;
+    rows += `<tr><td class="step">${s}</td><td>${formatNum(ch.vals[i])}</td>`+
+      `<td class="${rateClass(step)}">${step.toFixed(1)}%</td>`+
+      `<td class="${rateClass(overall)}">${overall.toFixed(1)}%</td></tr>`;
+  });
+  section.querySelector(".conversion-table tbody").innerHTML = rows;
+}
+
+const grid = document.getElementById("grid");
+channels.forEach(ch=>{
+  const overall = (ch.vals[ch.vals.length-1]/ch.vals[0]*100).toFixed(1);
+  const section = document.createElement("div");
+  section.className = "funnel-section";
+  section.innerHTML =
+    `<div class="section-title"><span>${ch.name}</span><span class="overall">整体转化 ${overall}%</span></div>`+
+    `<div class="funnel-chart"></div>`+
+    `<table class="conversion-table"><thead><tr>`+
+    `<th style="text-align:left">步骤</th><th>UV</th><th>环比转化率</th><th>整体转化率</th>`+
+    `</tr></thead><tbody></tbody></table>`;
+  grid.appendChild(section);
+  renderFunnel(section, ch);
+});
+</script>
+</body>
+</html>
