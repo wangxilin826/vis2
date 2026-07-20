@@ -1,0 +1,41 @@
+{
+  "updatedAt": "2026-07-20 13:21",
+  "todos": [
+    {
+      "id": "3zgXvnNUS0",
+      "title": "校招百鸟380期培训复盘材料",
+      "source": "老板指派",
+      "owner": "西晞",
+      "priority": "中",
+      "status": "待办",
+      "progress": 10,
+      "due": "2026-07-30",
+      "createdAt": "2026-07-20",
+      "note": "老板要求本周内交"
+    },
+    {
+      "id": "hmOMLNgs1d",
+      "title": "裹裹收入头脑风暴-流量方向方案汇总",
+      "source": "本人自建",
+      "owner": "西晞",
+      "priority": "中",
+      "status": "待办",
+      "progress": 0,
+      "due": "2026-07-28",
+      "createdAt": "2026-07-20",
+      "note": "自控端入口+外部渠道拓展两块"
+    },
+    {
+      "id": "vPOiT4CcdV",
+      "title": "小红书手机直冲PRD终稿评审",
+      "source": "本人自建",
+      "owner": "西晞",
+      "priority": "高",
+      "status": "进行中",
+      "progress": 60,
+      "due": "2026-07-25",
+      "createdAt": "2026-07-20",
+      "note": "待与交易侧对齐链路"
+    }
+  ]
+}
