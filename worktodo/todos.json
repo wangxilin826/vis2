@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-20 13:21",
+  "updatedAt": "2026-07-20 13:23",
   "todos": [
     {
       "id": "3zgXvnNUS0",
@@ -24,6 +24,18 @@
       "due": "2026-07-28",
       "createdAt": "2026-07-20",
       "note": "自控端入口+外部渠道拓展两块"
+    },
+    {
+      "id": "lj0kwoeyJN",
+      "title": "【端到端测试】看板链路验证",
+      "source": "本人自建",
+      "owner": "西晞",
+      "priority": "高",
+      "status": "进行中",
+      "progress": 42,
+      "due": "2026-07-22",
+      "createdAt": "2026-07-20",
+      "note": "自动化测试记录，验证后会删除"
     },
     {
       "id": "vPOiT4CcdV",
